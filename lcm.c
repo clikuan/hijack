@@ -23,10 +23,26 @@ static  __attribute__((constructor)) void setup(void){
 	old_remove = dlsym(dlHandle, "remove");
 	old_rename = dlsym(dlHandle, "rename");
 	old_setbuf = dlsym(dlHandle, "setbuf");
-
-
-
-
+	old_setvbuf = dlsym(dlHandle, "setvbuf");
+	old_tempnam = dlsym(dlHandle, "tempnam");
+	old_tmpfile = dlsym(dlHandle, "tmpfile");
+	old_tmpnam = dlsym(dlHandle, "tmpnam");
+	old_exit = dlsym(dlHandle, "exit");
+	old_mkdtemp = dlsym(dlHandle, "mkdtemp");
+	old_mkstemp = dlsym(dlHandle, "mkstemp");	
+	old_putenv = dlsym(dlHandle, "putenv");
+	old_rand = dlsym(dlHandle, "rand");
+	old_rand_r = dlsym(dlHandle, "rand_r");
+	old_setenv = dlsym(dlHandle, "setenv");
+	old_srand = dlsym(dlHandle, "srand");
+	old_system = dlsym(dlHandle, "system");
+	old_chdir = dlsym(dlHandle, "chdir");
+	old_chown = dlsym(dlHandle, "chown");
+	old_dup = dlsym(dlHandle, "dup");
+	old_dup2 = dlsym(dlHandle, "dup2");
+	old__exit = dlsym(dlHandle, "_exit");
+	old_execl = dlsym(dlHandle, "execl");
+	old_execle = dlsym(dlHandle, "execle");
 
 
 	outputFileName = old_getenv("MONITOR_OUTPUT");
@@ -42,10 +58,10 @@ static  __attribute__((constructor)) void setup(void){
 			}
 		}
 	}
-	else{
+	/*else{
 		fprintf(stderr, "variable MONITOR_OUTPUT is not specify\n");
 		exit(1);
-	}
+	}*/
 }
 static __attribute__((destructor)) void release(void){
 	if(outputFile)
@@ -57,19 +73,31 @@ static __attribute__((destructor)) void release(void){
 			fprintf((outputFile ? outputFile : stderr), fmt_p, __VA_ARGS__);	\
 			fprintf((outputFile ? outputFile : stderr), ") = "fmt_r"\n",result);    \
 }
-#define GEN_CODE_0(type, fName, fmt, ...){	\
+#define GEN_CODE_0(type, fName, ...){	\
 			type oldRes = old_##fName(__VA_ARGS__);	\
 			char* result;   \
-			if(strcmp(#type, "uid_t") == 0) result = getUserNmaeFromUid(oldRes);	\
-			else if(strcmp(#type, "char*") == 0) result = oldRes;	\
 			fprintf((outputFile ? outputFile : stderr), "[monitor] "#fName"(");	\	
-			fprintf((outputFile ? outputFile : stderr), ") = '%s'\n",result);    \
+			if(strcmp(#type, "uid_t") == 0) result = getUserNameFromUid(oldRes);	\
+			else if(strcmp(#type, "char*") == 0) result = oldRes;	\
+			else if(strcmp(#type, "FILE*") == 0) result = getFileName(oldRes);	\
+			else if(strcmp(#type, "int") == 0){	\
+				fprintf((outputFile ? outputFile : stderr), ") = %d\n", oldRes);    \
+				return oldRes;  \
+			}	\
+			fprintf((outputFile ? outputFile : stderr), ") = '%s'\n", result);    \
 			return oldRes;  \
 }
-char* getUserNmaeFromUid(uid_t uid){
+char* getUserNameFromUid(uid_t uid){
 	struct passwd *pwd;
 	if ((pwd = getpwuid(uid)) != NULL)
 		return pwd->pw_name;
+	else
+		return "NULL";
+}
+char* getGroupNameFromGid(gid_t gid){
+	struct group *g;
+	if((g = getgrgid(gid)) != NULL)
+		return g->gr_name;
 	else
 		return "NULL";
 }
@@ -93,11 +121,11 @@ char *getFileName(FILE * fptr){
 	return fd2Name(fd);
 }
 uid_t getuid(void){
-	GEN_CODE_0(uid_t, getuid,"");
+	GEN_CODE_0(uid_t, getuid);
 }
 char* getenv(const char *name){
 	char *result = old_getenv(name);
-	GEN_CODE(getenv, "%s", result, "'%s'", name);
+	GEN_CODE(getenv, "'%s'", result, "'%s'", name);
 	return result;
 }
 int closedir(DIR *dirp){
@@ -189,15 +217,119 @@ void setbuf(FILE *stream, char *buf){
 	old_setbuf(stream, buf);
 	GEN_CODE(setbuf, "", NULL, "'%s', '%s'", filename, buf);
 }
+int setvbuf(FILE *stream, char *buf, int mode, size_t size){
+	char *filename = getFileName(stream);
+	int result = old_setvbuf(stream, buf, mode, size);
+	GEN_CODE(setvbuf, "%d", result, "'%s', '%s', %d, %lu", filename, buf, mode, size);
+	return result;
+}
+char* tempnam(const char *dir, const char *pfx){
+	char *result = old_tempnam(dir, pfx);
+	GEN_CODE(tempnam, "'%s'", result, "'%s', '%s'", dir, pfx);
+	return result;
+}
+FILE* tmpfile(void){
+	GEN_CODE_0(FILE*, tmpfile);
+}
+char *tmpnam(char *s){
+	char *result = old_tmpnam(s);
+	GEN_CODE(tmpnam, "'%s'", result, "'%s'", s);
+	return result;
+}
+void exit(int status){
+	GEN_CODE(exit, "", NULL, "%d", status);
+	old_exit(status);
+}
+char* mkdtemp(char *template){
+	char *result = old_mkdtemp(template);
+	GEN_CODE(mkdtemp, "'%s'", result, "'%s'", template);
+	return result;
+}
+int mkstemp(char *template){
+	int result = old_mkstemp(template);
+	GEN_CODE(mkstemp, "'%d'", result, "'%s'", template);
+	return result;
+}
+int putenv(char *string){
+	int result = old_putenv(string);
+	GEN_CODE(putenv, "%d", result, "'%s'", string);
+	return result;
+}
+int rand(void){
+	GEN_CODE_0(int, rand);
+}
+int rand_r(unsigned int *seedp){
+	int result = old_rand_r(seedp);
+	GEN_CODE(rand_r, "%d", result, "%p", seedp);
+	return result;
+}
+int setenv(const char *name, const char *value, int overwrite){
+	int result = old_setenv(name, value, overwrite);
+	GEN_CODE(setenv, "%d", result, "'%s', '%s', %d",name, value, overwrite);
+	return result;
+}
+void srand(unsigned int seed){
+	old_srand(seed);
+	GEN_CODE(srand, "", NULL, "%u", seed);
+}
+int system(const char *command){
+	int result = old_system(command);
+	GEN_CODE(system, "%d", result, "'%s'", command);
+	return result;
+}
+int chdir(const char *path){
+	int result = old_chdir(path);
+	GEN_CODE(chdir, "%d", result, "'%s'", path);
+	return result;
+}
+int chown(const char *pathname, uid_t owner, gid_t group){
+	char *ownerName = getUserNameFromUid(owner);
+	char *groupName = getGroupNameFromGid(group);
+	int result = old_chown(pathname, owner, group);
+	GEN_CODE(chown, "%d", result, "'%s', '%s', '%s'", pathname, ownerName, groupName);
+	return result;	
+}
+int dup(int oldfd){
+	char *oldFileName = fd2Name(oldfd);
+	int result = old_dup(oldfd);
+	GEN_CODE(dup, "%d", result, "'%s'", oldFileName);
+	return result;
+}
+int dup2(int oldfd, int newfd){
+	char *oldFileName = fd2Name(oldfd);
+	char *newFileName = fd2Name(newfd);
+	int result = old_dup2(oldfd, newfd);
+	GEN_CODE(dup2, "%d", result, "'%s', '%s'", oldFileName, newFileName);
+	return result;
+}
+void _exit(int status){
+	old__exit(status);
+	GEN_CODE(_exit, "", NULL, "%d", status);
+}
+int execl(const char *path, const char *arg, ...){	
+	char *argv[2560];
+	argv[0] = arg;
+	int i = 1;
+	va_list argl;
+	va_start(argl, arg);
+	char *a; 
+	while((a = va_arg(argl, char*)) != NULL){
+		argv[i++] = a;
+	}
+	argv[i] = NULL;
+	va_end(argl);
 
-
-
-
-
-
-
-
-
+	int result = execv(path, argv);
+	fprintf((outputFile ? outputFile : stderr), "[monitor] execl(");	
+	int j;
+	for(j = 0; j < i; j++)
+		fprintf((outputFile ? outputFile : stderr),(j == i-1) ? "'%s'" :"'%s', ", argv[j]);
+	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
+	return result;
+}
+int execle(const char *path, const char *arg, ...){
+	
+}
 
 
 
