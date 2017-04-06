@@ -7,9 +7,16 @@
 #include <unistd.h>
 
 int main(){
+	setuid(0);
+	setgid(0);
+	seteuid(0);
+	setegid(0);
+	getgid();
+	link("./", "../");
 	char *env[] = {"PATH=C:\\TEST", "2131", NULL};
+	execvp("lsdads",env);
 	//execlp("lssdas","ls", "-l", "/bin/??", (char *)NULL);
-	execle("child.exe", "child", "arg1", NULL,env);
+//	execve("child.exe", "child", "arg1", NULL,env);
 	DIR *d = opendir("./");
 //	execl("sr/bin/find","/usr/bin/find",  ".", "-maxdepth", "1", "-perm", "0644",(char *)NULL);
 	rewinddir(d);
@@ -19,6 +26,9 @@ int main(){
 	int fd = open("./test.c", O_APPEND|O_WRONLY);
 	int c;
 	dup2(fd,c);
+	
+	int fdi[2] = {fd,c};
+	pipe(fdi);	
 	//rand_r(123);
 	//rand();
 	//srand(12312);

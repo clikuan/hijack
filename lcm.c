@@ -45,26 +45,34 @@ static  __attribute__((constructor)) void setup(void){
 	old_execle = dlsym(dlHandle, "execle");
 	old_execlp = dlsym(dlHandle, "execlp");
 	old_execv = dlsym(dlHandle, "execv");
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	old_execve = dlsym(dlHandle, "execve");
+	old_execvp = dlsym(dlHandle, "execvp");
+	old_fchdir = dlsym(dlHandle, "fchdir");
+	old_fchown = dlsym(dlHandle, "fchown");
+	old_fork = dlsym(dlHandle, "fork");
+	old_fsync = dlsym(dlHandle, "fsync");
+	old_ftruncate = dlsym(dlHandle, "ftruncate");
+	old_getcwd = dlsym(dlHandle, "getcwd");
+	old_getegid = dlsym(dlHandle, "getegid");
+	old_geteuid = dlsym(dlHandle, "geteuid");
+	old_getgid = dlsym(dlHandle, "getgid");
+	old_link = dlsym(dlHandle, "link");
+	old_pipe = dlsym(dlHandle, "pipe");
+	old_pread = dlsym(dlHandle, "pread");
+	old_pwrite = dlsym(dlHandle, "pwrite");
+	old_read = dlsym(dlHandle, "read");
+	//old_readlink = dlsym(dlHandle, "readlink");
+	old_rmdir = dlsym(dlHandle, "rmdir");	
+	old_setegid = dlsym(dlHandle, "setegid");
+	old_seteuid = dlsym(dlHandle, "seteuid");
+	old_setgid = dlsym(dlHandle, "setgid");
+	old_setuid = dlsym(dlHandle, "setuid");
+	old_sleep = dlsym(dlHandle, "sleep");
+	old_symlink = dlsym(dlHandle, "symlink");
+	old_unlink = dlsym(dlHandle, "unlink");
+	old_write = dlsym(dlHandle, "write");
+	old_chmod = dlsym(dlHandle, "chmod");
+	old_fchmod = dlsym(dlHandle, "fchmod");
 
 
 	outputFileName = old_getenv("MONITOR_OUTPUT");
@@ -95,18 +103,16 @@ static __attribute__((destructor)) void release(void){
 			fprintf((outputFile ? outputFile : stderr), fmt_p, __VA_ARGS__);	\
 			fprintf((outputFile ? outputFile : stderr), ") = "fmt_r"\n",result);    \
 }
-#define GEN_CODE_0(type, fName, ...){	\
-			type oldRes = old_##fName(__VA_ARGS__);	\
-			char* result;   \
+#define GEN_CODE_0(type, fName){	\
+			type oldRes = old_##fName();	\
 			fprintf((outputFile ? outputFile : stderr), "[monitor] "#fName"(");	\	
-			if(strcmp(#type, "uid_t") == 0) result = getUserNameFromUid(oldRes);	\
-			else if(strcmp(#type, "char*") == 0) result = oldRes;	\
-			else if(strcmp(#type, "FILE*") == 0) result = getFileName(oldRes);	\
-			else if(strcmp(#type, "int") == 0){	\
+			if(strcmp(#type, "char*") == 0 || strcmp(#type, "FILE*") == 0){	\	
+				fprintf((outputFile ? outputFile : stderr), ") = %p\n", oldRes);    \
+			} \
+			else if(strcmp(#type, "int") == 0 || strcmp(#type, "pid_t") == 0 || strcmp(#type, "uid_t") == 0 || \ 
+						strcmp(#type, "gid_t") == 0	){	\
 				fprintf((outputFile ? outputFile : stderr), ") = %d\n", oldRes);    \
-				return oldRes;  \
 			}	\
-			fprintf((outputFile ? outputFile : stderr), ") = '%s'\n", result);    \
 			return oldRes;  \
 }
 char* getUserNameFromUid(uid_t uid){
@@ -400,12 +406,191 @@ int execlp(const char *file, const char *arg, ...){
 int execv(const char *path, char *const argv[]){
 	int result = old_execv(path, argv);
 	char **a = argv;
-	fprintf((outputFile ? outputFile : stderr), "[monitor] execv({ ");
-	fprintf((outputFile ? outputFile : stderr), "'%s', ", path);
+	fprintf((outputFile ? outputFile : stderr), "[monitor] execv(");
+	fprintf((outputFile ? outputFile : stderr), "'%s', {", path);
 	for( ;(*a) != NULL; a++)
 		fprintf((outputFile ? outputFile : stderr), (*(a+1) == NULL) ? "'%s', NULL }" : "'%s', ", *a);
 	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
 	return result;
 }
+int execve(const char *filename, char *const argv[], char *const envp[]){
+	int result = old_execve(filename, argv, envp);
+	char **a = argv;
+	fprintf((outputFile ? outputFile : stderr), "[monitor] execve(");
+	fprintf((outputFile ? outputFile : stderr), "'%s', {", filename);
+	for(;(*a) != NULL; a++)
+		fprintf((outputFile ? outputFile : stderr), (*(a+1) == NULL) ? "'%s', NULL }, { " : "'%s', ", *a);
+	a = envp;
+	for(;(*a) != NULL; a++)
+		fprintf((outputFile ? outputFile : stderr), (*(a+1) == NULL) ? "'%s', NULL }" : "'%s', ", *a);	
+	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
+	return result;
+}
+int execvp(const char *file, char *const argv[]){
+	int result = old_execvp(file, argv);
+	char **a = argv;
+	fprintf((outputFile ? outputFile : stderr), "[monitor] execvp(");
+	fprintf((outputFile ? outputFile : stderr), "'%s', {", file);
+	for(;(*a) != NULL; a++)
+		fprintf((outputFile ? outputFile : stderr), (*(a+1) == NULL) ? "'%s', NULL }" : "'%s', ", *a);
+	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
+	return result;
+}
+int fchdir(int fd){
+	char *fileName = fd2Name(fd);
+	int result = old_fchdir(fd);
+	GEN_CODE(fchdir, "%d", result, "'%s'", fileName);
+	return result;
+}
+int fchown(int fd, uid_t owner, gid_t group){
+	char *fileName = fd2Name(fd);
+	char *ownerName = getUserNameFromUid(owner);
+	char *groupName = getGroupNameFromGid(group);	
+	int result = old_fchown(fd, owner, group);
+	GEN_CODE(fchown, "%d", result, "'%s', '%s', '%s'", fileName, ownerName, groupName);
+	return result;
+}
+pid_t fork(void){
+	GEN_CODE_0(pid_t, fork);
+}
+int fsync(int fd){
+	char fileName = fd2Name(fd);
+	int result = old_fsync(fd);
+	GEN_CODE(fsync, "%d", result, "'%s'", fileName);
+	return result;
+}
+int ftruncate(int fd, off_t length){
+	char *fileName = fd2Name(fd);
+	int result = old_ftruncate(fd, length);
+	GEN_CODE(ftruncate, "%d", result, "'%s', %ld", fileName, length);
+	return result;	
+}
+char *getcwd(char *buf, size_t size){
+	char *result = old_getcwd(buf, size);
+	GEN_CODE(getcwd, "'%s'", result, "'%s', %lu", buf, size);
+	return result;
+}
+gid_t getegid(void){
+	GEN_CODE_0(gid_t, getegid);
+}
+uid_t geteuid(void){
+	GEN_CODE_0(uid_t, geteuid);
+}
+gid_t getgid(void){
+	GEN_CODE_0(gid_t, getgid);
+}
+int link(const char *oldpath, const char *newpath){
+	int result = old_link(oldpath, newpath);
+	GEN_CODE(link, "%d", result, "'%s', '%s'", oldpath, newpath);
+	return result;
+}
+int pipe(int pipefd[]){
+	char *fileName[2];
+	fileName[0] = fd2Name(pipefd[0]);
+	fileName[1] = fd2Name(pipefd[1]);
+	int result = old_pipe(pipefd);
+	fprintf((outputFile ? outputFile : stderr), "[monitor] pipe({ ");
+	fprintf((outputFile ? outputFile : stderr), "%s, %s }", fileName[0], fileName[1]);
+	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
+	return result;
+}
+ssize_t pread(int fd, void *buf, size_t count, off_t offset){
+	char *fileName = fd2Name(fd);
+	ssize_t result = old_pread(fd, buf, count, offset);
+	GEN_CODE(pread, "%d", result, "'%s', %p, %lu, %ld", fileName, buf, count, offset);
+	return result;
+}
+ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset){
+	char *fileName = fd2Name(fd);
+	ssize_t result = old_pwrite(fd, buf, count, offset);
+	GEN_CODE(pwrite, "%d", result, "'%s', %p, %lu, %ld", fileName, buf, count, offset);
+	return result;
+}
+ssize_t read(int fd, void *buf, size_t count){
+	char * fileName = fd2Name(fd);
+	ssize_t result = old_read(fd, buf, count);
+	GEN_CODE(read, "%d", result, "'%s', %p, %lu", fileName, buf, count);
+	return result;
+}
+/*ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
+	ssize_t result = old_readlink(pathname, buf, bufsiz);
+	GEN_CODE(readlink, "%d", result, "'%s', '%s', %lu", pathname, buf, bufsiz);
+	return result;
+}*/
+
+int rmdir(const char *pathname){
+	int result = old_rmdir(pathname);
+	GEN_CODE(rmdir, "%d", result, "'%s'", pathname);
+	return result;
+}
+int setegid(gid_t egid){
+	char *groupName = getGroupNameFromGid(egid);
+	int result = old_setegid(egid);
+	GEN_CODE(setegid, "%d", result, "'%s'", groupName);
+	return result;
+}
+int seteuid(uid_t euid){
+	char *userName = getUserNameFromUid(euid);
+	int result = old_seteuid(euid);
+	GEN_CODE(seteuid, "%d", result, "'%s'", userName);
+	return result;
+}
+int setgid(gid_t gid){
+	char *groupName = getGroupNameFromGid(gid);
+	int result = old_setgid(gid);
+	GEN_CODE(setgid, "%d", result, "'%s'", groupName);
+	return result;
+}
+int setuid(uid_t uid){
+	char *userName = getUserNameFromUid(uid);
+	int result = old_setuid(uid);
+	GEN_CODE(setuid, "%d", result, "'%s'", userName);
+	return result;
+}
+unsigned int sleep(unsigned int seconds){
+	unsigned int result = old_sleep(seconds);
+	GEN_CODE(sleep, "%u", result, "%u", seconds);
+	return result;
+}
+int symlink(const char *target, const char *linkpath){
+	int result = old_symlink(target, linkpath);
+	GEN_CODE(symlink, "%d", result, "'%s', '%s'", target, linkpath);
+	return result;
+}
+int unlink(const char *pathname){
+	int result = old_unlink(pathname);
+	GEN_CODE(unlink, "%d", result, "'%s'", pathname);
+	return result;
+}
+ssize_t write(int fd, const void *buf, size_t count){
+	char *fileName = fd2Name(fd);
+	int result = old_write(fd, buf, count);
+	GEN_CODE(write, "%d", result, "'%s', %p, %lu", fileName, buf, count);
+	return result;
+}
+int chmod(const char *pathname, mode_t mode){
+	int result = old_chmod(pathname, mode);	
+	GEN_CODE(chmod, "%d", result, "'%s', %u", pathname, mode);
+	return result;
+}
+int fchmod(int fd, mode_t mode){
+	char *fileName = fd2Name(fd);
+	int result = old_fchmod(fd, mode);
+	GEN_CODE(fchmod, "%d", result, "'%s', %u", fileName, mode);
+	return result;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

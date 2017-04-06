@@ -4,7 +4,6 @@
 #include <sys/types.h>
 #include <string.h>
 #include <pwd.h>
-#include <unistd.h>
 #include <dirent.h>
 #include <stdarg.h>
 #include <fcntl.h>
@@ -127,6 +126,103 @@ int execlp(const char *, const char *, ...);
 
 int (*old_execv)(const char *, char *const []);
 int execv(const char *, char *const []);
+
+int (*old_execve)(const char *, char *const[], char *const[]);
+int execve(const char *, char *const[], char *const[]);
+
+int (*old_execvp)(const char *, char *const[]);
+int execvp(const char *, char *const[]);
+
+int (*old_fchdir)(int);
+int fchdir(int);
+
+int (*old_fchown)(int, uid_t, gid_t);
+int fchown(int, uid_t, gid_t);
+
+pid_t (*old_fork)(void);
+pid_t fork(void);
+
+int (*old_fsync)(int);
+int fsync(int);
+
+int (*old_ftruncate)(int, off_t);
+int ftruncate(int, off_t);
+
+char* getcwd(char *, size_t);
+char* (*old_getcwd)(char *, size_t);
+
+gid_t (*old_getegid)(void);
+gid_t getegid(void);
+
+uid_t (*old_geteuid)(void);
+uid_t geteuid(void);
+
+gid_t (*old_getgid)(void);
+gid_t getgid(void);
+
+int (*old_link)(const char *, const char *);
+int link(const char *, const char *);
+
+int (*old_pipe)(int[]);
+int pipe(int[]);
+
+ssize_t (*old_pread)(int, void *, size_t, off_t);
+ssize_t pread(int, void *, size_t, off_t);
+
+ssize_t (*old_pwrite)(int, const void *, size_t, off_t);
+ssize_t pwrite(int, const void *, size_t, off_t);
+
+ssize_t (*old_read)(int, void *, size_t);
+ssize_t read(int, void *, size_t);
+
+//size_t (*old_readlink)(const char *, char *, size_t);
+//size_t readlink(const char *, char *, size_t);
+
+int (*old_rmdir)(const char *);
+int rmdir(const char *);
+
+int (*old_setegid)(gid_t);
+int setegid(gid_t);
+
+int (*old_seteuid)(uid_t);
+int seteuid(uid_t);
+
+int (*old_setgid)(gid_t);
+int setgid(gid_t);
+
+int (*old_setuid)(uid_t);
+int setuid(uid_t);
+
+unsigned int (*old_sleep)(unsigned int);
+unsigned int sleep(unsigned int);
+
+int (*old_symlink)(const char *, const char *);
+int symlink(const char *, const char *);
+
+int (*old_unlink)(const char *);
+int unlink(const char *);
+
+ssize_t (*old_write)(int, const void *, size_t);
+ssize_t write(int, const void *, size_t);
+
+int (*old_chmod)(const char *, mode_t);
+int chmod(const char *, mode_t);
+
+int (*old_fchmod)(int, mode_t);
+int fchmod(int, mode_t);
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
