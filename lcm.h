@@ -10,6 +10,8 @@
 #include <fcntl.h>
 #include <grp.h>
 #include <sys/mman.h>
+#include <errno.h>
+#include <sys/param.h>
 
 
 uid_t (*old_getuid)(void);
@@ -120,6 +122,11 @@ int execl(const char *, const char *, ...);
 int (*old_execle)(const char *, const char *, ...);
 int execle(const char *, const char *, ...);
 
+int (*old_execlp)(const char *, const char *, ...);
+int execlp(const char *, const char *, ...);
+
+int (*old_execv)(const char *, char *const []);
+int execv(const char *, char *const []);
 
 
 

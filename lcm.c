@@ -43,6 +43,28 @@ static  __attribute__((constructor)) void setup(void){
 	old__exit = dlsym(dlHandle, "_exit");
 	old_execl = dlsym(dlHandle, "execl");
 	old_execle = dlsym(dlHandle, "execle");
+	old_execlp = dlsym(dlHandle, "execlp");
+	old_execv = dlsym(dlHandle, "execv");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 	outputFileName = old_getenv("MONITOR_OUTPUT");
@@ -316,20 +338,74 @@ int execl(const char *path, const char *arg, ...){
 	while((a = va_arg(argl, char*)) != NULL){
 		argv[i++] = a;
 	}
-	argv[i] = NULL;
+	argv[i++] = NULL;
 	va_end(argl);
 
 	int result = execv(path, argv);
 	fprintf((outputFile ? outputFile : stderr), "[monitor] execl(");	
 	int j;
+	fprintf((outputFile ? outputFile : stderr), "'%s', ", path);
 	for(j = 0; j < i; j++)
-		fprintf((outputFile ? outputFile : stderr),(j == i-1) ? "'%s'" :"'%s', ", argv[j]);
+		fprintf((outputFile ? outputFile : stderr),(j == i-1) ? "NULL" : "'%s', ", argv[j]);
 	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
 	return result;
 }
 int execle(const char *path, const char *arg, ...){
-	
-}
+	va_list ap;
+	va_start (ap, arg);
+	char *argv[2560];
+	char *a;
+	argv[0] = arg;
+	int i = 1;
 
+	va_start (ap, arg);	
+	while((a = va_arg(ap, char*)) != NULL){
+		argv[i++] = a;
+	}
+	argv[i++] = NULL;
+	char **envp = va_arg(ap, char **);
+	va_end(ap);
+	int result = execve(path, argv, envp);	
+	fprintf((outputFile ? outputFile : stderr), "[monitor] execle(");
+	fprintf((outputFile ? outputFile : stderr), "'%s', ", path);
+	int j;
+	for(j = 0; j < i; j++)
+		fprintf((outputFile ? outputFile : stderr), (j == i-1) ? "NULL, { " : "'%s', ", argv[j]);
+	for( ;(*envp) != NULL; envp++)
+		fprintf((outputFile ? outputFile : stderr), (*(envp+1) == NULL) ? "'%s', NULL }" : "'%s', ", *envp);
+	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
+	return result;
+}
+int execlp(const char *file, const char *arg, ...){
+	va_list ap;
+	va_start(ap, arg);
+	char *argv[2560];
+	char *a;
+	argv[0] = arg;
+	int i = 1;
+	va_start(ap, arg);
+	while((a = va_arg(ap, char*)) != NULL){
+		argv[i++]  = a;
+	}
+	argv[i++] = NULL;
+	int result = execvp(file, argv);	
+	fprintf((outputFile ? outputFile : stderr), "[monitor] execlp(");
+	fprintf((outputFile ? outputFile : stderr), "'%s', ", file);
+	int j;
+	for(j = 0; j < i; j++)
+		fprintf((outputFile ? outputFile : stderr), (j == i-1) ? "NULL" : "'%s', ", argv[j]);
+	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
+	return result;
+}
+int execv(const char *path, char *const argv[]){
+	int result = old_execv(path, argv);
+	char **a = argv;
+	fprintf((outputFile ? outputFile : stderr), "[monitor] execv({ ");
+	fprintf((outputFile ? outputFile : stderr), "'%s', ", path);
+	for( ;(*a) != NULL; a++)
+		fprintf((outputFile ? outputFile : stderr), (*(a+1) == NULL) ? "'%s', NULL }" : "'%s', ", *a);
+	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
+	return result;
+}
 
 
