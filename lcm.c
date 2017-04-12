@@ -73,7 +73,12 @@ static  __attribute__((constructor)) void setup(void){
 	old_write = dlsym(dlHandle, "write");
 	old_chmod = dlsym(dlHandle, "chmod");
 	old_fchmod = dlsym(dlHandle, "fchmod");
-
+	old___fxstat = dlsym(dlHandle, "__fxstat");
+	old___xstat = dlsym(dlHandle, "__xstat");
+	old___lxstat = dlsym(dlHandle, "__lxstat");
+	old_mkdir = dlsym(dlHandle, "mkdir");
+	old_mkfifo = dlsym(dlHandle, "mkfifo");
+	old_umask = dlsym(dlHandle, "umask");
 
 	outputFileName = old_getenv("MONITOR_OUTPUT");
 	outputFile = NULL;
@@ -148,6 +153,34 @@ char *getFileName(FILE * fptr){
 	int fd = fileno(fptr);
 	return fd2Name(fd);
 }
+char* getFileType(mode_t m){
+	char *type = malloc(20);
+	if(S_ISBLK(m)){
+		strcpy(type, "Block");
+	}
+	else if(S_ISCHR(m)){
+		strcpy(type, "Character");
+	}
+	else if(S_ISDIR(m)){
+		strcpy(type, "Directory");
+	}
+	else if(S_ISFIFO(m)){
+		strcpy(type, "FIFO");
+	}
+	else if(S_ISREG(m)){
+		strcpy(type, "Regular");
+	}
+	else if(S_ISLNK(m)){
+		strcpy(type, "Symbolic");
+	}
+	else if(S_ISSOCK(m)){
+		strcpy(type, "Socket");
+	}
+	else{
+		strcpy(type, "Unknow");
+	}
+	return type;
+}
 uid_t getuid(void){
 	GEN_CODE_0(uid_t, getuid);
 }
@@ -196,7 +229,6 @@ void rewinddir(DIR *dirp){
 	old_rewinddir(dirp);
 	GEN_CODE(rewinddir, "", NULL, "'%s'", dirName);
 }
-
 void seekdir(DIR *dirp, long loc){
 	char *dirName = getDirectoryName(dirp);
 	old_seekdir(dirp, loc);
@@ -376,9 +408,9 @@ int execle(const char *path, const char *arg, ...){
 	fprintf((outputFile ? outputFile : stderr), "'%s', ", path);
 	int j;
 	for(j = 0; j < i; j++)
-		fprintf((outputFile ? outputFile : stderr), (j == i-1) ? "NULL, { " : "'%s', ", argv[j]);
+		fprintf((outputFile ? outputFile : stderr), (j == i-1) ? "NULL, [ " : "'%s', ", argv[j]);
 	for( ;(*envp) != NULL; envp++)
-		fprintf((outputFile ? outputFile : stderr), (*(envp+1) == NULL) ? "'%s', NULL }" : "'%s', ", *envp);
+		fprintf((outputFile ? outputFile : stderr), (*(envp+1) == NULL) ? "'%s', NULL ]" : "'%s', ", *envp);
 	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
 	return result;
 }
@@ -407,9 +439,9 @@ int execv(const char *path, char *const argv[]){
 	int result = old_execv(path, argv);
 	char **a = argv;
 	fprintf((outputFile ? outputFile : stderr), "[monitor] execv(");
-	fprintf((outputFile ? outputFile : stderr), "'%s', {", path);
+	fprintf((outputFile ? outputFile : stderr), "'%s', [", path);
 	for( ;(*a) != NULL; a++)
-		fprintf((outputFile ? outputFile : stderr), (*(a+1) == NULL) ? "'%s', NULL }" : "'%s', ", *a);
+		fprintf((outputFile ? outputFile : stderr), (*(a+1) == NULL) ? "'%s', NULL ]" : "'%s', ", *a);
 	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
 	return result;
 }
@@ -417,12 +449,12 @@ int execve(const char *filename, char *const argv[], char *const envp[]){
 	int result = old_execve(filename, argv, envp);
 	char **a = argv;
 	fprintf((outputFile ? outputFile : stderr), "[monitor] execve(");
-	fprintf((outputFile ? outputFile : stderr), "'%s', {", filename);
+	fprintf((outputFile ? outputFile : stderr), "'%s', [", filename);
 	for(;(*a) != NULL; a++)
-		fprintf((outputFile ? outputFile : stderr), (*(a+1) == NULL) ? "'%s', NULL }, { " : "'%s', ", *a);
+		fprintf((outputFile ? outputFile : stderr), (*(a+1) == NULL) ? "'%s', NULL ], [ " : "'%s', ", *a);
 	a = envp;
 	for(;(*a) != NULL; a++)
-		fprintf((outputFile ? outputFile : stderr), (*(a+1) == NULL) ? "'%s', NULL }" : "'%s', ", *a);	
+		fprintf((outputFile ? outputFile : stderr), (*(a+1) == NULL) ? "'%s', NULL ]" : "'%s', ", *a);	
 	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
 	return result;
 }
@@ -430,9 +462,9 @@ int execvp(const char *file, char *const argv[]){
 	int result = old_execvp(file, argv);
 	char **a = argv;
 	fprintf((outputFile ? outputFile : stderr), "[monitor] execvp(");
-	fprintf((outputFile ? outputFile : stderr), "'%s', {", file);
+	fprintf((outputFile ? outputFile : stderr), "'%s', [", file);
 	for(;(*a) != NULL; a++)
-		fprintf((outputFile ? outputFile : stderr), (*(a+1) == NULL) ? "'%s', NULL }" : "'%s', ", *a);
+		fprintf((outputFile ? outputFile : stderr), (*(a+1) == NULL) ? "'%s', NULL ]" : "'%s', ", *a);
 	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
 	return result;
 }
@@ -489,8 +521,8 @@ int pipe(int pipefd[]){
 	fileName[0] = fd2Name(pipefd[0]);
 	fileName[1] = fd2Name(pipefd[1]);
 	int result = old_pipe(pipefd);
-	fprintf((outputFile ? outputFile : stderr), "[monitor] pipe({ ");
-	fprintf((outputFile ? outputFile : stderr), "%s, %s }", fileName[0], fileName[1]);
+	fprintf((outputFile ? outputFile : stderr), "[monitor] pipe([ ");
+	fprintf((outputFile ? outputFile : stderr), "'%s', '%s' ]", fileName[0], fileName[1]);
 	fprintf((outputFile ? outputFile : stderr), ") = %d\n", result);
 	return result;
 }
@@ -579,11 +611,46 @@ int fchmod(int fd, mode_t mode){
 	GEN_CODE(fchmod, "%d", result, "'%s', %u", fileName, mode);
 	return result;
 }
-
-
-
-
-
+int __fxstat(int ver, int fd, struct stat *buf){
+	char *fileName = fd2Name(fd);
+	int result = old___fxstat(ver, fd, buf);
+	fprintf((outputFile ? outputFile : stderr), "[monitor] __fxstat");
+	fprintf((outputFile ? outputFile : stderr), "('%s', 'type:%s permission:%o size:%llu')", fileName, getFileType(buf->st_mode),
+					(buf->st_mode & (S_IRWXU | S_IRWXG | S_IRWXO)), buf->st_size); 
+	fprintf((outputFile ? outputFile : stderr), " = %d\n", result);
+	return result;
+}
+int __xstat(int ver, const char *pathname, struct stat *buf){
+	int result = old___xstat(ver, pathname, buf);	
+	fprintf((outputFile ? outputFile : stderr), "[monitor] __xstat");	
+	fprintf((outputFile ? outputFile : stderr), "('%s', 'type:%s permission:%o size:%llu')", pathname, getFileType(buf->st_mode),
+					(buf->st_mode & (S_IRWXU | S_IRWXG | S_IRWXO)), buf->st_size);
+	fprintf((outputFile ? outputFile : stderr), " = %d\n", result);
+	return result;
+}
+int __lxstat(int ver, const char *pathname, struct stat *buf){
+	int result = old___lxstat(ver, pathname, buf);	
+	fprintf((outputFile ? outputFile : stderr), "[monitor] __lxstat");	
+	fprintf((outputFile ? outputFile : stderr), "('%s', 'type:%s permission:%o size:%llu')", pathname, getFileType(buf->st_mode),
+					(buf->st_mode & (S_IRWXU | S_IRWXG | S_IRWXO)), buf->st_size);
+	fprintf((outputFile ? outputFile : stderr), " = %d\n", result);
+	return result;
+}
+int mkdir(const char *pathname, mode_t mode){
+	int result = old_mkdir(pathname, mode);
+	GEN_CODE(mkdir, "%d", result, "'%s', %u", pathname, mode);
+	return result;	
+}
+int mkfifo(const char *pathname, mode_t mode){
+	int result = old_mkfifo(pathname, mode);
+	GEN_CODE(mkfifo, "%d", result, "'%s', %u", pathname, mode);
+	return result;
+}
+mode_t umask(mode_t mask){
+	mode_t result = old_umask(mask);
+	GEN_CODE(umask, "%u", result, "%u", mask);
+	return result;
+}
 
 
 

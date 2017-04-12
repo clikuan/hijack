@@ -24,9 +24,17 @@ int main(){
 	open("./lcm.so",O_WRONLY|O_CREAT,640);
 	FILE *f = tmpfile();
 	int fd = open("./test.c", O_APPEND|O_WRONLY);
+	struct stat buf;
+	fstat(fd, &buf);
 	int c;
+	stat("./123", &buf);
+	lstat("./123", &buf);
 	dup2(fd,c);
-	
+	mkdir("./1233",S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	mkfifo("./1wer233",S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	stat("./1233", &buf);
+	stat("./1wer233", &buf);	
+	umask(0);
 	int fdi[2] = {fd,c};
 	pipe(fdi);	
 	//rand_r(123);

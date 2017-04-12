@@ -217,17 +217,10 @@ int __fxstat(int, int, struct stat *);
 int (*old___xstat)(int, const char *, struct stat *);
 int __xstat(int ,const char *, struct stat *);
 
-int (*old___lxstat)(int, const char *, struct stat *);
-int __lxstat(int, const char *, struct stat *);
 
-int (*old_mkdir)(const char *, mode_t);
-int mkdir(const char *, mode_t);
 
-int (*old_mkfifo)(const char *, mode_t);
-int mkfifo(const char *, mode_t);
 
-mode_t (*old_umask)(mode_t);
-mode_t umask(mode_t);
+
 
 
 
