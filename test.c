@@ -7,6 +7,8 @@
 #include <unistd.h>
 
 int main(){
+	char buf1[256];
+	readlink("./123",buf1,255);
 	setuid(0);
 	setgid(0);
 	seteuid(0);

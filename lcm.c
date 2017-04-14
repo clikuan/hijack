@@ -61,7 +61,7 @@ static  __attribute__((constructor)) void setup(void){
 	old_pread = dlsym(dlHandle, "pread");
 	old_pwrite = dlsym(dlHandle, "pwrite");
 	old_read = dlsym(dlHandle, "read");
-	//old_readlink = dlsym(dlHandle, "readlink");
+	old_readlink = dlsym(dlHandle, "readlink");
 	old_rmdir = dlsym(dlHandle, "rmdir");	
 	old_setegid = dlsym(dlHandle, "setegid");
 	old_seteuid = dlsym(dlHandle, "seteuid");
@@ -79,6 +79,11 @@ static  __attribute__((constructor)) void setup(void){
 	old_mkdir = dlsym(dlHandle, "mkdir");
 	old_mkfifo = dlsym(dlHandle, "mkfifo");
 	old_umask = dlsym(dlHandle, "umask");
+	old_popen = dlsym(dlHandle, "popen");	
+	old_pclose = dlsym(dlHandle, "pclose");
+	old_realloc = dlsym(dlHandle, "realloc");
+	old_puts = dlsym(dlHandle, "puts");
+	old_feof = dlsym(dlHandle, "feof");
 
 	outputFileName = old_getenv("MONITOR_OUTPUT");
 	outputFile = NULL;
@@ -139,7 +144,7 @@ char *fd2Name(int fd){
 	char * filename = malloc(255);
 	ssize_t n;
 	sprintf(fd_path, "/proc/self/fd/%d", fd);
-	n = readlink(fd_path, filename, 255);
+	n = old_readlink(fd_path, filename, 255);
 	if (n < 0)
 		return "NULL";
 	filename[n] = '\0';
@@ -486,7 +491,7 @@ pid_t fork(void){
 	GEN_CODE_0(pid_t, fork);
 }
 int fsync(int fd){
-	char fileName = fd2Name(fd);
+	char *fileName = fd2Name(fd);
 	int result = old_fsync(fd);
 	GEN_CODE(fsync, "%d", result, "'%s'", fileName);
 	return result;
@@ -544,12 +549,11 @@ ssize_t read(int fd, void *buf, size_t count){
 	GEN_CODE(read, "%d", result, "'%s', %p, %lu", fileName, buf, count);
 	return result;
 }
-/*ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
+ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 	ssize_t result = old_readlink(pathname, buf, bufsiz);
 	GEN_CODE(readlink, "%d", result, "'%s', '%s', %lu", pathname, buf, bufsiz);
 	return result;
-}*/
-
+}
 int rmdir(const char *pathname){
 	int result = old_rmdir(pathname);
 	GEN_CODE(rmdir, "%d", result, "'%s'", pathname);
@@ -651,6 +655,35 @@ mode_t umask(mode_t mask){
 	GEN_CODE(umask, "%u", result, "%u", mask);
 	return result;
 }
+FILE *popen(const char *command, const char *type){
+	FILE * result = old_popen(command, type);
+	GEN_CODE(popen, "%p", result, "'%s', '%s'", command, type);
+	return result;
+}
+int pclose(FILE *stream){
+	char *fileName = getFileName(stream); 
+	int result = old_pclose(stream);
+	GEN_CODE(pclose, "%d", result, "'%s'", fileName);
+	return result;
+}
+void *realloc(void *ptr, size_t size){
+	void *result = old_realloc(ptr, size);
+	GEN_CODE(realloc, "%p", result, "%p %lu", ptr, size);
+	return result;
+}
+int puts(const char *s){
+	int result = old_puts(s);
+	GEN_CODE(puts, "%d", result, "'%s'", s);
+	return result;
+}
+int feof(FILE *stream){
+	char *fileName = getFileName(stream);
+	int result = old_feof(stream);
+	GEN_CODE(feof, "%d", result, "'%s'",fileName);
+	return result;
+}
+
+
 
 
 

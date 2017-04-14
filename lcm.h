@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <fcntl.h> 
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <sys/types.h>
@@ -6,12 +7,12 @@
 #include <pwd.h>
 #include <dirent.h>
 #include <stdarg.h>
-#include <fcntl.h>
 #include <grp.h>
 #include <sys/mman.h>
 #include <errno.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 uid_t (*old_getuid)(void);
 uid_t getuid(void);
@@ -175,8 +176,8 @@ ssize_t pwrite(int, const void *, size_t, off_t);
 ssize_t (*old_read)(int, void *, size_t);
 ssize_t read(int, void *, size_t);
 
-//size_t (*old_readlink)(const char *, char *, size_t);
-//size_t readlink(const char *, char *, size_t);
+ssize_t (*old_readlink)(const char *, char *, size_t);
+ssize_t readlink(const char *, char *, size_t);
 
 int (*old_rmdir)(const char *);
 int rmdir(const char *);
@@ -229,11 +230,20 @@ int mkfifo(const char *, mode_t);
 mode_t (*old_umask)(mode_t);
 mode_t umask(mode_t);
 
+FILE *(*old_popen)(const char *, const char *);
+FILE *popen(const char *, const char *);
 
+int (*old_pclose)(FILE *);
+int pclose(FILE *);
 
+void* (*old_realloc)(void *, size_t);
+void* realloc(void *, size_t);
 
+int (*old_puts)(const char *);
+int puts(const char *);
 
-
+int (*old_feof)(FILE *);
+int feof(FILE *);
 
 
 
