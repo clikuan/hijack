@@ -26,6 +26,7 @@ int main(){
 	open("./lcm.so",O_WRONLY|O_CREAT,640);
 	FILE *f = tmpfile();
 	int fd = open("./test.c", O_APPEND|O_WRONLY);
+	rewind(f);
 	struct stat buf;
 	fstat(fd, &buf);
 	int c;

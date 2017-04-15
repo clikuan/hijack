@@ -84,6 +84,7 @@ static  __attribute__((constructor)) void setup(void){
 	old_realloc = dlsym(dlHandle, "realloc");
 	old_puts = dlsym(dlHandle, "puts");
 	old_feof = dlsym(dlHandle, "feof");
+	old_rewind = dlsym(dlHandle, "rewind");
 
 	outputFileName = old_getenv("MONITOR_OUTPUT");
 	outputFile = NULL;
@@ -681,6 +682,11 @@ int feof(FILE *stream){
 	int result = old_feof(stream);
 	GEN_CODE(feof, "%d", result, "'%s'",fileName);
 	return result;
+}
+void rewind(FILE *stream){
+	char *fileName = getFileName(stream);
+	old_rewind(stream);
+	GEN_CODE(rewind, "", NULL, "'%s'", fileName);
 }
 
 

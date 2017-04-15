@@ -245,5 +245,8 @@ int puts(const char *);
 int (*old_feof)(FILE *);
 int feof(FILE *);
 
+void (*old_rewind)(FILE *);
+void rewind(FILE *);
+
 
 
