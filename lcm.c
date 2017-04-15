@@ -669,7 +669,7 @@ int pclose(FILE *stream){
 }
 void *realloc(void *ptr, size_t size){
 	void *result = old_realloc(ptr, size);
-	GEN_CODE(realloc, "%p", result, "%p %lu", ptr, size);
+	GEN_CODE(realloc, "%p", result, "%p, %lu", ptr, size);
 	return result;
 }
 int puts(const char *s){
