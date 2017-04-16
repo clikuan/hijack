@@ -230,23 +230,20 @@ int mkfifo(const char *, mode_t);
 mode_t (*old_umask)(mode_t);
 mode_t umask(mode_t);
 
-FILE *(*old_popen)(const char *, const char *);
-FILE *popen(const char *, const char *);
+FILE *(*old_fopen)(const char *, const char *);
+FILE *fopen(const char *, const char *);
 
-int (*old_pclose)(FILE *);
-int pclose(FILE *);
+int (*old_fileno)(FILE *);
+int fileno(FILE *);
+
+int (*old_fflush)(FILE *);
+int fflush(FILE *);
+
+off_t (*old_lseek)(int, off_t, int);
+off_t lseek(int, off_t, int);
 
 void* (*old_realloc)(void *, size_t);
 void* realloc(void *, size_t);
-
-int (*old_puts)(const char *);
-int puts(const char *);
-
-int (*old_feof)(FILE *);
-int feof(FILE *);
-
-void (*old_rewind)(FILE *);
-void rewind(FILE *);
 
 
 

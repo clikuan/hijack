@@ -45,4 +45,5 @@ int main(){
 	//srand(12312);
 	//exit(-1);
 	//return 0;
+	system("ls -la");
 }

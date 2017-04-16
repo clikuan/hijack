@@ -79,12 +79,11 @@ static  __attribute__((constructor)) void setup(void){
 	old_mkdir = dlsym(dlHandle, "mkdir");
 	old_mkfifo = dlsym(dlHandle, "mkfifo");
 	old_umask = dlsym(dlHandle, "umask");
-	old_popen = dlsym(dlHandle, "popen");	
-	old_pclose = dlsym(dlHandle, "pclose");
+	old_fopen = dlsym(dlHandle, "fopen");
+	old_fileno= dlsym(dlHandle, "fileno");
+	old_fflush = dlsym(dlHandle, "fflush");
+	old_lseek = dlsym(dlHandle, "lseek");
 	old_realloc = dlsym(dlHandle, "realloc");
-	old_puts = dlsym(dlHandle, "puts");
-	old_feof = dlsym(dlHandle, "feof");
-	old_rewind = dlsym(dlHandle, "rewind");
 
 	outputFileName = old_getenv("MONITOR_OUTPUT");
 	outputFile = NULL;
@@ -93,7 +92,7 @@ static  __attribute__((constructor)) void setup(void){
 	}
 	if(outputFileName != NULL){
 		if(strcmp(outputFileName, "stderr")){
-			if((outputFile = fopen(outputFileName, "w")) == NULL){
+			if((outputFile = old_fopen(outputFileName, "w")) == NULL){
 				fprintf(stderr, "can not open file:%s\n", outputFileName);
 				exit(1);
 			}
@@ -156,7 +155,7 @@ char* getDirectoryName(DIR *dir){
 	return fd2Name(fd);
 }
 char *getFileName(FILE * fptr){
-	int fd = fileno(fptr);
+	int fd = old_fileno(fptr);
 	return fd2Name(fd);
 }
 char* getFileType(mode_t m){
@@ -567,6 +566,7 @@ int setegid(gid_t egid){
 	return result;
 }
 int seteuid(uid_t euid){
+	printf("12313123\n");
 	char *userName = getUserNameFromUid(euid);
 	int result = old_seteuid(euid);
 	GEN_CODE(seteuid, "%d", result, "'%s'", userName);
@@ -656,15 +656,27 @@ mode_t umask(mode_t mask){
 	GEN_CODE(umask, "%u", result, "%u", mask);
 	return result;
 }
-FILE *popen(const char *command, const char *type){
-	FILE * result = old_popen(command, type);
-	GEN_CODE(popen, "%p", result, "'%s', '%s'", command, type);
+FILE *fopen(const char *path, const char *mode){
+	FILE *result = old_fopen(path, mode);
+	GEN_CODE(fopen, "%p", result, "'%s', '%s'", path, mode);
+	return result;	
+}
+int fileno(FILE *stream){
+	char *fileName = getFileName(stream);
+	int result = old_fileno(stream);
+	GEN_CODE(fileno, "%d", result, "'%s'", fileName);
 	return result;
 }
-int pclose(FILE *stream){
-	char *fileName = getFileName(stream); 
-	int result = old_pclose(stream);
-	GEN_CODE(pclose, "%d", result, "'%s'", fileName);
+int fflush(FILE *stream){
+	char *fileName = getFileName(stream);
+	int result = old_fflush(stream);
+	GEN_CODE(fflush, "%d", result, "'%s'", fileName);
+	return result;
+}
+off_t lseek(int fd, off_t offset, int whence){
+	char *fileName = fd2Name(fd);
+	off_t result = old_lseek(fd, offset, whence);	
+	GEN_CODE(lseek, "%ld", result, "'%s', %ld, %d", fileName, offset, whence);
 	return result;
 }
 void *realloc(void *ptr, size_t size){
@@ -672,30 +684,6 @@ void *realloc(void *ptr, size_t size){
 	GEN_CODE(realloc, "%p", result, "%p, %lu", ptr, size);
 	return result;
 }
-int puts(const char *s){
-	int result = old_puts(s);
-	GEN_CODE(puts, "%d", result, "'%s'", s);
-	return result;
-}
-int feof(FILE *stream){
-	char *fileName = getFileName(stream);
-	int result = old_feof(stream);
-	GEN_CODE(feof, "%d", result, "'%s'",fileName);
-	return result;
-}
-void rewind(FILE *stream){
-	char *fileName = getFileName(stream);
-	old_rewind(stream);
-	GEN_CODE(rewind, "", NULL, "'%s'", fileName);
-}
-
-
-
-
-
-
-
-
 
 
 
